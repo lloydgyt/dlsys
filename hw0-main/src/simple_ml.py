@@ -20,7 +20,7 @@ def add(x, y):
         Sum of x + y
     """
     ### BEGIN YOUR CODE
-    pass
+    return x + y
     ### END YOUR CODE
 
 
@@ -48,7 +48,19 @@ def parse_mnist(image_filename, label_filename):
                 for MNIST will contain the values 0-9.
     """
     ### BEGIN YOUR CODE
-    pass
+    # open using gzip using binary!
+    with gzip.open(image_filename, 'rb') as f:
+        temp_X = np.frombuffer(f.read(), dtype=np.uint8, offset=16).reshape(-1, 28 * 28)
+        X = temp_X.astype(np.float32) / 255
+    # read first magic number (MSB)
+    # get data type, dimension
+    # read dimension line (determine the size of nparray)
+    # read data, rescale the element
+    with gzip.open(label_filename, 'rb') as f:
+        y = np.frombuffer(f.read(), dtype=np.uint8, offset=8)
+
+    # do the same to lable
+    return X, y
     ### END YOUR CODE
 
 
@@ -68,11 +80,14 @@ def softmax_loss(Z, y):
         Average softmax loss over the sample.
     """
     ### BEGIN YOUR CODE
-    pass
+    rows = Z.shape[0]
+    temp = np.log(np.sum(np.exp(Z), axis=1))
+    temp2 = Z[np.arange(rows), y]
+    return np.sum(temp - temp2) / rows
     ### END YOUR CODE
 
 
-def softmax_regression_epoch(X, y, theta, lr = 0.1, batch=100):
+def softmax_regression_epoch(X, y, theta, lr=0.1, batch=100):
     """ Run a single epoch of SGD for softmax regression on the data, using
     the step size lr and specified batch size.  This function should modify the
     theta matrix in place, and you should iterate through batches in X _without_
@@ -91,7 +106,27 @@ def softmax_regression_epoch(X, y, theta, lr = 0.1, batch=100):
         None
     """
     ### BEGIN YOUR CODE
-    pass
+    # do by batch!
+    m = X.shape[0]
+    num_classes = theta.shape[1]
+    # what if not divisable?
+    for i in range(m // batch):
+        # print(f"DEBUG: i = {i}")
+        base = i * batch
+        X_batch = X[base:base+batch, :]
+        # print(f"DEBUG: X_batch = {X_batch}")
+        y_batch = y[base:base+batch]
+        Z = np.exp(X_batch @ theta)
+        Z = Z / np.sum(Z, axis=1)[:, np.newaxis]
+        # print(f"DEBUG: Z = {Z}")
+        I_y = np.zeros((batch, num_classes))
+        I_y[np.arange(batch), y_batch] = 1
+        # print(f"DEBUG: I_y = {I_y}")
+        d_theta = -lr * ((X_batch.T @ (Z - I_y)) / batch)
+        # print(f"DEBUG: d_theta = {d_theta}")
+        theta += d_theta
+        # need to modify in place
+        # print(f"DEBUG: theta = {theta}")
     ### END YOUR CODE
 
 

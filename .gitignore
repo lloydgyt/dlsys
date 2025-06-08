@@ -1,2 +1,6 @@
 *.zip
 *.Identifier
+mugrade/
+env/
+.ipynb_checkpoints/
+__pycache__/
