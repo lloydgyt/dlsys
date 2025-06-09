@@ -107,26 +107,16 @@ def softmax_regression_epoch(X, y, theta, lr=0.1, batch=100):
         None
     """
     ### BEGIN YOUR CODE
-    # do by batch!
     m = X.shape[0]
     num_classes = theta.shape[1]
-    # what if not divisable?
     for i in range(m // batch):
-        # print(f"DEBUG: i = {i}")
         base = i * batch
         X_batch = X[base : base + batch]
-        # print(f"DEBUG: X_batch = {X_batch}")
         y_batch = y[base : base + batch]
         Z = softmax(X_batch @ theta)
-        # print(f"DEBUG: Z = {Z}")
         I_y = one_hot_y(batch, num_classes, y_batch)
-        # print(f"DEBUG: I_y = {I_y}")
         d_theta = -lr * ((X_batch.T @ (Z - I_y)) / batch)
-        # print(f"DEBUG: d_theta = {d_theta}")
         theta[...] = theta + d_theta
-        # theta += d_theta
-        # need to modify in place
-        # print(f"DEBUG: theta = {theta}")
     ### END YOUR CODE
 
 
