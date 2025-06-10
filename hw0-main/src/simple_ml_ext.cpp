@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <cmath>
 #include <cstddef>
+#include <cstdio>
 #include <iostream>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
@@ -13,30 +14,25 @@ namespace py = pybind11;
 void matrix_mult(const float *A, const float *B, float *C, size_t m, size_t n,
                  size_t k) {
   // TODO: use blocking to boost
-  for (int h = 0; h < k; h++) {
-    for (int i = 0; i < m; i++) {
-      for (int j = 0; j < k; j++) {
-        C[i * k + j] = A[i * n + h] * B[h * k + j];
+  // NOTE: C is set to 0 at this point
+  for (size_t h = 0; h < n; h++) {
+    for (size_t i = 0; i < m; i++) {
+      for (size_t j = 0; j < k; j++) {
+        C[i * k + j] += A[i * n + h] * B[h * k + j];
       }
     }
   }
 }
 
-// modify H by softmax
+// modify H(m by n) by softmax
 void softmax(float *H, size_t m, size_t n) {
-  for (int i = 0; i < m; i++) {
-    for (int j = 0; j < n; j++) {
-      H[i * n + j] = exp(H[i * n + j]);
-    }
-  }
-
-  for (int i = 0; i < m; i++) {
+  for (size_t i = 0; i < m; i++) {
     float sum = 0;
-    int j = 0;
-    for (j = 0; j < n; j++) {
+    for (size_t j = 0; j < n; j++) {
+      H[i * n + j] = exp(H[i * n + j]);
       sum += H[i * n + j];
     }
-    for (; j >= 0; j--) {
+    for (size_t j = 0; j < n; j++) {
       H[i * n + j] /= sum;
     }
   }
@@ -68,21 +64,28 @@ void softmax_regression_epoch_cpp(const float *X, const unsigned char *y,
    */
 
   /// BEGIN YOUR CODE
-  for (int base = 0; base + batch - 1 < m; base += batch) {
+  float X_theta[batch * k];
+  // printf("stack array begins at: %p\n", X_theta);
+  for (size_t base = 0; base + batch - 1 < m; base += batch) {
     const float *curr_X = X + base * n;
     const unsigned char *curr_y = y + base;
     // TODO: use stack array or malloc free?
-    // get softmax using batch X
-    float X_theta[batch][k];
-    matrix_mult(curr_X, theta, (float *)X_theta, batch, n, k);
-    softmax((float *)X_theta, batch, n);
-    // get I_y using batch y
-    float I_y[batch][k];
-    memset(I_y, 0, batch * k);
-    for (int j = 0; j < batch; j++) {
-      I_y[j][curr_y[j]] = 1;
+    // get softmax (Z) using batch X
+    memset(X_theta, 0, sizeof(X_theta));
+    matrix_mult(curr_X, theta, X_theta, batch, n, k);
+    softmax(X_theta, batch, k);
+    for (size_t i = 0; i < batch; i++) {
+      X_theta[i * k + curr_y[i]] -= 1;
     }
     // update using d_theta
+    for (size_t h = 0; h < batch; h++) {
+      for (size_t i = 0; i < n; i++) {
+        for (size_t j = 0; j < k; j++) {
+          theta[i * k + j] -=
+              lr * (curr_X[h * n + i] * X_theta[h * k + j]) / ((float)batch);
+        }
+      }
+    }
   }
   /// END YOUR CODE
 }
